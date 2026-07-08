@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: fashion_exchange_mongodb
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    # Not mapping port 27017 to host for security; communication happens inside the docker network.
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fashion_exchange_backend
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      - MONGODB_URI=mongodb://mongodb:27017/fashion_exchange
+      - JWT_ACCESS_SECRET=d836e5944cb3f9e83cf6a49a9f24e39fb87a12b2104058d83a12a84
+      - JWT_REFRESH_SECRET=a8274f9812bc8d31aef742910ba1b2389d0234f9a1283e910fae1201
+      - COOKIE_SECRET=92bca8137cdfe8a12b94
+      - FRONTEND_URL=http://localhost
+      - CLOUDINARY_CLOUD_NAME=fashion-exchange-cdn
+      - CLOUDINARY_API_KEY=123456789012345
+      - CLOUDINARY_API_SECRET=aBcDeFgHiJkLmNoPqRsTuVwXyZ
+      - SMTP_HOST=smtp.sendgrid.net
+      - SMTP_PORT=587
+      - SMTP_USER=apikey
+      - SMTP_PASS=SG.secure_production_key_here
+      - SMTP_FROM=noreply@fashionexchange.ai
+    # Port 8000 is not exposed to host directly; Nginx handles reverse proxying.
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fashion_exchange_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_BASE_URL=/api
+      - VITE_SOCKET_SERVER_URL=/
+
+volumes:
+  mongo_data:
